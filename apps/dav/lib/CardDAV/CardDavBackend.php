@@ -40,7 +40,14 @@ namespace OCA\DAV\CardDAV;
 use OCA\DAV\Connector\Sabre\Principal;
 use OCA\DAV\DAV\Sharing\Backend;
 use OCA\DAV\DAV\Sharing\IShareable;
+use OCA\DAV\Events\AddressBookCreatedEvent;
+use OCA\DAV\Events\AddressBookDeletedEvent;
+use OCA\DAV\Events\AddressBookUpdatedEvent;
+use OCA\DAV\Events\CardCreatedEvent;
+use OCA\DAV\Events\CardDeletedEvent;
+use OCA\DAV\Events\CardUpdatedEvent;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IUser;
@@ -52,7 +59,6 @@ use Sabre\CardDAV\Plugin;
 use Sabre\DAV\Exception\BadRequest;
 use Sabre\VObject\Component\VCard;
 use Sabre\VObject\Reader;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\GenericEvent;
 
 class CardDavBackend implements BackendInterface, SyncSupport {
@@ -87,7 +93,7 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 	/** @var IUserManager */
 	private $userManager;
 
-	/** @var EventDispatcherInterface */
+	/** @var IEventDispatcher */
 	private $dispatcher;
 
 	private $etagCache = [];
@@ -99,13 +105,13 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 	 * @param Principal $principalBackend
 	 * @param IUserManager $userManager
 	 * @param IGroupManager $groupManager
-	 * @param EventDispatcherInterface $dispatcher
+	 * @param IEventDispatcher $dispatcher
 	 */
 	public function __construct(IDBConnection $db,
 								Principal $principalBackend,
 								IUserManager $userManager,
 								IGroupManager $groupManager,
-								EventDispatcherInterface $dispatcher) {
+								IEventDispatcher $dispatcher) {
 		$this->db = $db;
 		$this->principalBackend = $principalBackend;
 		$this->userManager = $userManager;
@@ -388,6 +394,9 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 
 			$this->addChange($addressBookId, "", 2);
 
+			$addressBookRow = $this->getAddressBookById($addressBookId);
+			$this->dispatcher->dispatchTyped(new AddressBookUpdatedEvent((int)$addressBookId, $addressBookRow));
+
 			return true;
 		});
 	}
@@ -441,7 +450,11 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 			->setParameters($values)
 			->execute();
 
-		return $query->getLastInsertId();
+		$addressBookId = $query->getLastInsertId();
+		$addressBookRow = $this->getAddressBookById($addressBookId);
+		$this->dispatcher->dispatchTyped(new AddressBookCreatedEvent($addressBookId, $addressBookRow));
+
+		return $addressBookId;
 	}
 
 	/**
@@ -472,6 +485,8 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 		$query->delete($this->dbCardsPropertiesTable)
 			->where($query->expr()->eq('addressbookid', $query->createNamedParameter($addressBookId)))
 			->execute();
+
+		$this->dispatcher->dispatchTyped(new AddressBookDeletedEvent((int) $addressBookId));
 	}
 
 	/**
@@ -661,6 +676,7 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 		$this->addChange($addressBookId, $cardUri, 1);
 		$this->updateProperties($addressBookId, $cardUri, $cardData);
 
+		$this->dispatcher->dispatchTyped(new CardCreatedEvent($addressBookId, $cardUri, $cardData));
 		$this->dispatcher->dispatch('\OCA\DAV\CardDAV\CardDavBackend::createCard',
 			new GenericEvent(null, [
 				'addressBookId' => $addressBookId,
@@ -721,6 +737,7 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 		$this->addChange($addressBookId, $cardUri, 2);
 		$this->updateProperties($addressBookId, $cardUri, $cardData);
 
+		$this->dispatcher->dispatchTyped(new CardUpdatedEvent($addressBookId, $cardUri, $cardData));
 		$this->dispatcher->dispatch('\OCA\DAV\CardDAV\CardDavBackend::updateCard',
 			new GenericEvent(null, [
 				'addressBookId' => $addressBookId,
@@ -751,6 +768,7 @@ class CardDavBackend implements BackendInterface, SyncSupport {
 
 		$this->addChange($addressBookId, $cardUri, 3);
 
+		$this->dispatcher->dispatchTyped(new CardDeletedEvent($addressBookId, $cardUri));
 		$this->dispatcher->dispatch('\OCA\DAV\CardDAV\CardDavBackend::deleteCard',
 			new GenericEvent(null, [
 				'addressBookId' => $addressBookId,
