@@ -1,34 +1,32 @@
 <template>
-	<li class="unified-search__result">
+	<a :href="resourceUrl || '#'"
+		class="unified-search__result"
+		@click="onClick">
+		<!-- Icon describing the result -->
 		<div class="unified-search__result-icon"
-			role="img"
-			:class="icon"
-			:style="{ backgroundImage: `url(${thumbnailUrl})` }" />
-		<div class="unified-search__result-content">
-			<h3 class="unified-search__result-line-one" v-text="title" />
-			<h4 v-if="subline" class="unified-search__result-line-two" v-text="subline" />
+			:class="{
+				'unified-search__result-icon--rounded': rounded,
+				'unified-search__result-icon--no-preview': !hasValidThumbnail,
+				'unified-search__result-icon--with-thumbnail': hasValidThumbnail,
+				[iconClass]: true
+			}"
+			role="img">
+			<img v-if="hasValidThumbnail" :src="thumbnailUrl" :alt="t('core', 'Thumbnail for {result}', {result: title})">
 		</div>
-		<Actions class="unified-search__result-actions">
-			<slot />
-		</Actions>
-	</li>
+
+		<!-- Title and sub-title -->
+		<span class="unified-search__result-content">
+			<h3 class="unified-search__result-line-one">{{ title }}</h3>
+			<h4 v-if="subline" class="unified-search__result-line-two">{{ subline }}</h4>
+		</span>
+	</a>
 </template>
 
 <script>
-import Actions from '@nextcloud/vue/dist/Components/Actions'
-
 export default {
 	name: 'SearchResult',
 
-	components: {
-		Actions,
-	},
-
 	props: {
-		icon: {
-			type: String,
-			default: null,
-		},
 		thumbnailUrl: {
 			type: String,
 			default: null,
@@ -44,6 +42,26 @@ export default {
 		resourceUrl: {
 			type: String,
 			default: null,
+		},
+		iconClass: {
+			type: String,
+			default: '',
+		},
+		rounded: {
+			type: Boolean,
+			default: false,
+		},
+	},
+
+	data() {
+		return {
+			hasValidThumbnail: this.thumbnailUrl && this.thumbnailUrl.trim() !== '',
+		}
+	},
+
+	methods: {
+		onClick(e) {
+			this.$emit('click', e)
 		},
 	},
 }
@@ -65,6 +83,7 @@ $margin-right: 2px;
 		border-bottom: none;
 	}
 
+	&:active,
 	&:hover,
 	&:focus {
 		background-color: var(--color-background-hover);
@@ -81,6 +100,27 @@ $margin-right: 2px;
 		border-radius: var(--border-radius);
 		background-position: center center;
 		background-size: cover;
+		&--rounded {
+			border-radius: $clickable-area / 2;
+		}
+		&--no-preview {
+			background-size: 32px;
+		}
+		&--with-thumbnail {
+			// compensate for border
+			max-width: $clickable-area - 2px;
+			max-height: $clickable-area - 2px;
+			border: 1px solid var(--color-border);
+		}
+
+		img {
+			// Make sure to keep ratio
+			width: 100%;
+			height: 100%;
+
+			object-fit: cover;
+			object-position: center;
+		}
 	}
 
 	&-icon,
@@ -105,6 +145,8 @@ $margin-right: 2px;
 		margin: 0;
 		white-space: nowrap;
 		text-overflow: ellipsis;
+		// Use the same color as the `a`
+		color: inherit;
 		font-size: inherit;
 	}
 	&-line-two {

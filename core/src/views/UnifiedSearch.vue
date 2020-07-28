@@ -63,19 +63,20 @@
 				:class="`unified-search__results-${type}`"
 				:aria-label="typesMap[type]">
 				<!-- Search results -->
-				<SearchResult v-for="result in limitIfAny(list, type)" :key="result.resourceUrl" v-bind="result">
-					<ActionLink icon="icon-external" :href="result.resourceUrl" />
-				</SearchResult>
+				<li v-for="result in limitIfAny(list, type)" :key="result.resourceUrl">
+					<SearchResult v-bind="result" />
+				</li>
 
 				<!-- Load more button -->
-				<SearchResult v-if="!reached[type]"
-					:title="loading[type]
-						? t('core', 'Loading more results …')
-						: t('core', 'Load more results')"
-					:icon="loading[type] ? 'icon-loading-small' : ''"
-					@click="loadMore(type)">
-					<ActionButton v-if="!loading[type]" icon="icon-confirm" @click.stop="loadMore(type)" />
-				</SearchResult>
+				<li>
+					<SearchResult v-if="!reached[type]"
+						class="unified-search__result-more"
+						:title="loading[type]
+							? t('core', 'Loading more results …')
+							: t('core', 'Load more results')"
+						:icon-class="loading[type] ? 'icon-loading-small' : ''"
+						@click.prevent="loadMore(type)" />
+				</li>
 			</ul>
 		</template>
 	</HeaderMenu>
@@ -83,8 +84,6 @@
 
 <script>
 import { getTypes, search, defaultLimit } from '../services/UnifiedSearchService'
-import ActionButton from '@nextcloud/vue/dist/Components/ActionButton'
-import ActionLink from '@nextcloud/vue/dist/Components/ActionLink'
 import EmptyContent from '@nextcloud/vue/dist/Components/EmptyContent'
 
 import debounce from 'debounce'
@@ -98,8 +97,6 @@ export default {
 	name: 'UnifiedSearch',
 
 	components: {
-		ActionButton,
-		ActionLink,
 		EmptyContent,
 		HeaderMenu,
 		SearchResult,
@@ -341,6 +338,10 @@ $margin: 10px;
 			font-weight: bold;
 			margin: $margin;
 		}
+	}
+
+	.unified-search__result-more::v-deep {
+		color: var(--color-text-maxcontrast);
 	}
 
 	.empty-content {
