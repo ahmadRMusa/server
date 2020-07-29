@@ -113,6 +113,7 @@ export default {
 			results: {},
 
 			query: '',
+			focused: null,
 
 			defaultLimit,
 			minSearchLength,
@@ -173,8 +174,20 @@ export default {
 				this.open = true
 				this.focusInput()
 			}
-		})
 
+			// If tab or arrow down, focus next result
+			if (event.key === 'ArrowDown' || event.key === 'Tab') {
+				event.preventDefault()
+				this.focusNext()
+			}
+
+			// If maj+tab or arrow up, focus prev result
+			if (event.key === 'ArrowUp'
+				|| (event.shiftKey && event.key === 'Tab')) {
+				event.preventDefault()
+				this.focusPrev()
+			}
+		})
 	},
 
 	methods: {
@@ -194,6 +207,7 @@ export default {
 			this.loading = {}
 			this.reached = {}
 			this.results = {}
+			this.focused = null
 		},
 
 		/**
@@ -244,6 +258,13 @@ export default {
 					this.$set(this.reached, type, true)
 				}
 
+				// If none already focused, focus the first rendered result
+				if (this.focused === null) {
+					this.$nextTick(() => {
+						this.focusFirst()
+					})
+				}
+
 				this.$set(this.loading, type, false)
 			})
 		},
@@ -291,6 +312,13 @@ export default {
 				}
 			}
 
+			// Focus result after render
+			if (this.focused !== null) {
+				this.$nextTick(() => {
+					this.focusIndex(this.focused)
+				})
+			}
+
 			this.$set(this.loading, type, false)
 		},
 
@@ -308,12 +336,74 @@ export default {
 			}
 			return list.slice(0, this.limits[type])
 		},
+
+		getResultsList() {
+			return this.$el.querySelectorAll('.unified-search__results .unified-search__result')
+		},
+
+		/**
+		 * Focus the first result if any
+		 */
+		focusFirst() {
+			const results = this.getResultsList()
+			if (results && results.length > 0) {
+				this.focused = 0
+				this.focusIndex(this.focused)
+			}
+		},
+
+		/**
+		 * Focus the next result if any
+		 */
+		focusNext() {
+			if (this.focused === null) {
+				this.focusFirst()
+				return
+			}
+
+			const results = this.getResultsList()
+			// If we're not focusing the last, focus the next one
+			if (results && results.length > 0 && this.focused + 1 < results.length) {
+				this.focused++
+				this.focusIndex(this.focused)
+			}
+		},
+
+		/**
+		 * Focus the previous result if any
+		 */
+		focusPrev() {
+			if (this.focused === null) {
+				this.focusFirst()
+				return
+			}
+
+			const results = this.getResultsList()
+			// If we're not focusing the first, focus the previous one
+			if (results && results.length > 0 && this.focused > 0) {
+				this.focused--
+				this.focusIndex(this.focused)
+			}
+
+		},
+
+		/**
+		 * Focus the specified result index if it exists
+		 * @param {number} index the result index
+		 */
+		focusIndex(index) {
+			const results = this.getResultsList()
+			if (results && results[index]) {
+				results[index].focus()
+			}
+		},
 	},
 }
 </script>
 
 <style lang="scss" scoped>
 $margin: 10px;
+$input-padding: 6px;
 
 .unified-search {
 	&__input-wrapper {
@@ -325,18 +415,20 @@ $margin: 10px;
 	}
 
 	&__input {
-		width: calc(100% - 2 * 8px);
+		// Minus margins
+		width: calc(100% - 2 * #{$margin});
 		height: 34px;
-		margin: 8px;
+		margin: $margin;
+		padding: $input-padding;
 	}
 
 	&__results {
 		&::before {
-			content: attr(aria-label);
 			display: block;
-			color: var(--color-primary);
-			font-weight: bold;
 			margin: $margin;
+			margin-left: $margin + $input-padding;
+			content: attr(aria-label);
+			color: var(--color-primary);
 		}
 	}
 

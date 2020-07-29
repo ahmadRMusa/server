@@ -70,12 +70,11 @@ export default {
 <style lang="scss" scoped>
 $clickable-area: 44px;
 $margin: 10px;
-$margin-right: 2px;
 
 .unified-search__result {
 	display: flex;
 	height: $clickable-area;
-	padding: $margin $margin-right $margin $margin - $margin-right;
+	padding: $margin;
 	border-bottom: 1px solid var(--color-border);
 
 	// Load more entry,
@@ -135,7 +134,7 @@ $margin-right: 2px;
 		flex-wrap: wrap;
 		// Set to minimum and gro from it
 		min-width: 0;
-		padding: 0 $margin - $margin-right;
+		padding-left: $margin;
 	}
 
 	&-line-one,

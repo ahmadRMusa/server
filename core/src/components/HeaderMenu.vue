@@ -82,6 +82,10 @@ export default {
 		},
 	},
 
+	mounted() {
+		document.addEventListener('keydown', this.onKeyDown)
+	},
+
 	beforeMount() {
 		subscribe(`header-menu-${this.id}-close`, this.closeMenu)
 		subscribe(`header-menu-${this.id}-open`, this.openMenu)
@@ -131,6 +135,14 @@ export default {
 			this.$emit('open')
 			this.$emit('update:open', true)
 			emit(`header-menu-${this.id}-open`)
+		},
+
+		onKeyDown(event) {
+			// If opened and escape pressed, close
+			if (event.key === 'Escape' && this.opened) {
+				event.preventDefault()
+				this.opened = false
+			}
 		},
 	},
 }
