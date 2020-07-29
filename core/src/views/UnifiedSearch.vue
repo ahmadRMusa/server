@@ -175,17 +175,19 @@ export default {
 				this.focusInput()
 			}
 
-			// If tab or arrow down, focus next result
-			if (event.key === 'ArrowDown' || event.key === 'Tab') {
-				event.preventDefault()
-				this.focusNext()
-			}
+			if (this.open) {
+				// If tab or arrow down, focus next result
+				if (event.key === 'ArrowDown' || event.key === 'Tab') {
+					event.preventDefault()
+					this.focusNext()
+				}
 
-			// If maj+tab or arrow up, focus prev result
-			if (event.key === 'ArrowUp'
-				|| (event.shiftKey && event.key === 'Tab')) {
-				event.preventDefault()
-				this.focusPrev()
+				// If maj+tab or arrow up, focus prev result
+				if (event.key === 'ArrowUp'
+					|| (event.shiftKey && event.key === 'Tab')) {
+					event.preventDefault()
+					this.focusPrev()
+				}
 			}
 		})
 	},
@@ -420,6 +422,7 @@ $input-padding: 6px;
 		height: 34px;
 		margin: $margin;
 		padding: $input-padding;
+		text-overflow: ellipsis;
 	}
 
 	&__results {
